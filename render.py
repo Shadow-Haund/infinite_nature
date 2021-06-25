@@ -23,11 +23,14 @@ def sobel_fg_alpha(idepth, beta=5.0):
   Returns:
     alpha: [B, H, W, 1] alpha visibility.
   """
-  # Compute Sobel edges and their magnitude.
-  sobel_components = tf.image.sobel_edges(idepth)
+  # Вычисляет Sobel edges и их величину (magnitude).
+  # Я не нащел понятия Sobel edges, есть Sobel operator и на сколько я понял он используется для определения
+  # границ изображения то есть нахождения этих edges
+  sobel_components = tf.image.sobel_edges(idepth) # Возвращает тензор, содержащий карты Sobel edges
   sobel_mag_components = sobel_components**2
-  sobel_mag_square = tf.math.reduce_sum(sobel_mag_components, axis=-1)
-  sobel_mag = tf.sqrt(sobel_mag_square + 1e-06)
+  sobel_mag_square = tf.math.reduce_sum(sobel_mag_components, axis=-1) # вычисляет сумму значений для указанного измерения
+  # и всех этих значений записывает эту сумму
+  sobel_mag = tf.sqrt(sobel_mag_square + 1e-06) # Из значений тензора вычисляет поэлементно корень
 
   # Вычислить альфы из величин sobel edges.
   alpha = tf.exp(-1.0 * beta * sobel_mag)
@@ -59,7 +62,8 @@ def render(input_rgbd, input_pose, input_intrinsics,
   # This returns [B, H, W, 1]
   alpha = sobel_fg_alpha(disparity, beta=10.0)
   # Make the alpha hard.
-  mask = tf.cast(tf.greater(alpha, alpha_threshold), dtype=tf.float32)
+  mask = tf.cast(tf.greater(alpha, alpha_threshold), dtype=tf.float32) # tf.greater поэлементно сравнивает
+  # alpha > alpha_threshold и возвращает массив bool
 
   # Now we'll render RGB and mask from the target view:
   rgb_and_mask = tf.concat([rgb, mask], axis=-1)
@@ -127,7 +131,7 @@ def render_channels(
   output = rasterize_triangles.rasterize(
       vertices, attributes, triangles, proj_matrix, width, height, background)
   output_channels, output_depths = tf.split(output, [channel_count, 1], axis=-1)
-  output_disparity = tf.math.divide_no_nan(
+  output_disparity = tf.math.divide_no_nan( # возвращает 0 если знаменатель 0
       1.0, tf.clip_by_value(output_depths, 1.0 / 100.0, 1.0 / 0.01))
 
   return (output_channels, output_disparity)

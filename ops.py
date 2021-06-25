@@ -13,12 +13,12 @@ def instance_norm(inputs, scope="instance_norm"):
     epsilon = 1e-05
     # All axes except first (batch) and last (channels).
     axes = list(range(1, inputs.shape.ndims - 1))
-    mean, variance = tf.nn.moments(inputs, axes, keepdims=True)
-    return tf.nn.batch_normalization(inputs, mean, variance, beta, gamma, epsilon)
-
+    mean, variance = tf.nn.moments(inputs, axes, keepdims=True) # Вычисляет среднее значение и дисперсию inputs по осям axes
+    return tf.nn.batch_normalization(inputs, mean, variance, beta, gamma, epsilon) # Выполняет Batch normalization
+    # или пакетная нормализация
 
 def fully_connected(x, units, use_bias=True, scope="linear"):
-  """Создает полностью связанный слой.
+  """Создает полностью связанный слой (layer).
 
   Аргументы:
     x: [B, ...] пакет векторов
@@ -31,8 +31,8 @@ def fully_connected(x, units, use_bias=True, scope="linear"):
     output of the fully connected layer on x.
   """
   with tf.compat.v1.variable_scope(scope):
-    x = tf.compat.v1.layers.flatten(x)
-    x = tf.compat.v1.layers.dense(
+    x = tf.compat.v1.layers.flatten(x) # Сглаживает входной тензор не не изменяя ось
+    x = tf.compat.v1.layers.dense( # функциональный интерфейс для полносвязного слоя
         x,
         units=units,
         use_bias=use_bias)
@@ -59,11 +59,11 @@ def double_size(image):
   multiples = [1] * (len(shape) - 2) + [2, 2]
   tiled = tf.tile(image, multiples)
   newshape = shape[:-3] + [shape[-3] * 2, shape[-2] * 2, shape[-1]]
-  return tf.reshape(tiled, newshape)
+  return tf.reshape(tiled, newshape) # изменяет форму тензора не меняя его значения или их порядок
 
 
 def leaky_relu(x, alpha=0.01):
-  return tf.nn.leaky_relu(x, alpha)
+  return tf.nn.leaky_relu(x, alpha) # выщитывает функцию активации, тут функция Leaky ReLU
 
 
 def spectral_norm(w, iteration=1, update_variable=False):
@@ -97,7 +97,7 @@ def spectral_norm(w, iteration=1, update_variable=False):
   w_shape = w.shape.as_list()
   w = tf.reshape(w, [-1, w_shape[-1]])
 
-  u = tf.compat.v1.get_variable(
+  u = tf.compat.v1.get_variable( # берет существующую переменную с заданными параметрами или создает новую
       "u", [1, w_shape[-1]],
       initializer=tf.random_normal_initializer(),
       trainable=False)
@@ -107,12 +107,12 @@ def spectral_norm(w, iteration=1, update_variable=False):
   for _ in range(iteration):
     # степенной метод. Обычно достаточно одной итерации.
     v_ = tf.matmul(u_hat, tf.transpose(w))
-    v_hat = tf.nn.l2_normalize(v_)
+    v_hat = tf.nn.l2_normalize(v_) # проводит нормализацию по оси применяя норму L2
 
     u_ = tf.matmul(v_hat, w)
     u_hat = tf.nn.l2_normalize(u_)
 
-  u_hat = tf.stop_gradient(u_hat)
+  u_hat = tf.stop_gradient(u_hat) # прекращает вычисление градиента
   v_hat = tf.stop_gradient(v_hat)
 
   sigma = tf.matmul(tf.matmul(v_hat, w), tf.transpose(u_hat))
@@ -122,8 +122,8 @@ def spectral_norm(w, iteration=1, update_variable=False):
     # чтобы предотвратить гонки.
     update_op = u.assign(u_hat)
   else:
-    update_op = tf.no_op()
-  with tf.control_dependencies([update_op]):
+    update_op = tf.no_op() # Ничего не делает. Используется как заглушка
+  with tf.control_dependencies([update_op]): # диспетчер который указывает (specifies) управляющие зависимости (control dependencies)
     w_norm = w / sigma
     w_norm = tf.reshape(w_norm, w_shape)
 
@@ -170,7 +170,7 @@ def sn_conv(tensor, channels, kernel_size=3, stride=1,
       w = tf.compat.v1.get_variable(
           "kernel",
           shape=[kernel_size, kernel_size, tensor_shape[-1], channels])
-      x = tf.nn.conv2d(
+      x = tf.nn.conv2d( #
           tensor,
           spectral_norm(w, update_variable=config.is_training()),
           [1, stride, stride, 1],
@@ -178,10 +178,10 @@ def sn_conv(tensor, channels, kernel_size=3, stride=1,
       if use_bias:
         bias = tf.compat.v1.get_variable(
             "bias", [channels], initializer=tf.constant_initializer(0.0))
-        x = tf.nn.bias_add(x, bias)
+        x = tf.nn.bias_add(x, bias) # добавляет bias к x где x - тензор и bias - 1D тензор
 
     else:
-      x = tf.compat.v1.layers.conv2d(
+      x = tf.compat.v1.layers.conv2d( # Функциональный интерфейс для 2D сверточного слоя
           tensor,
           channels,
           kernel_size,

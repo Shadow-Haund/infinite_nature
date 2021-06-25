@@ -5,9 +5,8 @@ import tensorflow as tf
 
 
 def diff_resize_area(tensor, new_height_width):
-  """Performs a resize op that passes gradients evenly. Я без понятия что значит op гугл предполагает “original post.”
-  что не очень вяжется с кодом но и на ошибку не похоже так как я не знаю во что там илгли промахнуться, посмотрел какие
-  возможные варианты из 2-х букв расположенных рядом с o и p можно составить, ничего не увидел
+  """Performs a resize op that passes gradients evenly.
+   Выполняет операцию изменения размера, которая равномерно передает градиенты
 
   Тензор проходит через изменение размера и пул, где операции изменения размера и пула определяются наименьшим
   общим множителем. Поскольку изменение размера с помощью nearest_neighbors и avg_pool распределяет градиенты
@@ -36,7 +35,7 @@ def diff_resize_area(tensor, new_height_width):
   if l_h == curr_h and l_w == curr_w:
     im = tensor
   elif (l_h < (10 * new_h) and l_w < (10 * new_w)):
-    im = tf.compat.v1.image.resize_bilinear(
+    im = tf.compat.v1.image.resize_bilinear(    # нет описания на сайте
         tensor, [l_h, l_w], half_pixel_centers=True)
   else:
     raise RuntimeError("DifferentiableResizeArea is memory inefficient"
@@ -46,7 +45,8 @@ def diff_resize_area(tensor, new_height_width):
   lw_factor = l_w // new_w
   if lh_factor == lw_factor == 1:
     return im
-  return tf.nn.avg_pool2d(
+  return tf.nn.avg_pool2d( # выполняет average pooling на входных данных (возвращает среднее всех значений из
+      # части изображения, покрываемой фильтром)
       im, [lh_factor, lw_factor], [lh_factor, lw_factor], padding="VALID")
 
 
@@ -85,7 +85,7 @@ def spade(x,
         kernel_size=3,
         use_spectral_norm=use_spectral_norm,
         scope="conv_cond")
-    condition = tf.nn.relu(condition)
+    condition = tf.nn.relu(condition) # Вычисляет усеченное линейное преобразование как max(condition, 0)
     gamma = ops.sn_conv(condition, channel, kernel_size=3,
                         use_spectral_norm=use_spectral_norm, scope="gamma",
                         pad_type="CONSTANT")

@@ -6,7 +6,7 @@ import tensorflow as tf
 
 
 def reparameterize(mu, logvar):
-  """Выбрать случайную переменную.
+  """Выбрать (Sample) случайную переменную.
 
   Аргументы:
     mu: Среднее значение нормального шума для выборки
@@ -15,9 +15,9 @@ def reparameterize(mu, logvar):
   Вывод:
     Случайная гауссовская выборка из mu и logvar.
   """
-  with tf.name_scope("reparameterization"):
+  with tf.name_scope("reparameterization"): # к именам всех операций включенных в него добавляется префикс
     std = tf.exp(0.5 * logvar)
-    eps = tf.random.normal(std.get_shape())
+    eps = tf.random.normal(std.get_shape()) # выводит случайные значения из нормального распределения
 
     return eps * std + mu
 
@@ -37,7 +37,8 @@ def encoder(x, scope="spade_encoder"):
   x = 2 * x - 1
   num_channel = 16
 
-  with tf.compat.v1.variable_scope(scope, reuse=tf.compat.v1.AUTO_REUSE):
+  with tf.compat.v1.variable_scope(scope, reuse=tf.compat.v1.AUTO_REUSE): # tf.compat.v1.AUTO_REUSE говорит что
+      # get_variable () должна создать запрошенную переменную, если она не существует, если же существует, то вернуть
     x = ops.sn_conv(x, num_channel, kernel_size=3, stride=2,
                     use_bias=True, use_spectral_norm=True, scope="conv_0")
     x = ops.instance_norm(x, scope="inst_norm_0")
@@ -81,7 +82,7 @@ def refinement_network(rgbd, mask, z, scope="spade_generator"):
   H, W должна быть разделена на 2 ** num_up_layers
 
   Аргументы:
-    rgbd: [B, H, W, 4] срендеренный кадр для уточнения
+    rgbd: [B, H, W, 4] отрендеренный кадр для уточнения
     mask: [B, H, W, 1] бинарная маска неизвестных областей. 1 где известно и 0 где неизвестно
     z: [B, D] вектор шума используется как шум для генератора
     scope: (str) variable scope
@@ -105,7 +106,7 @@ def refinement_network(rgbd, mask, z, scope="spade_generator"):
   with tf.compat.v1.variable_scope(scope, reuse=tf.compat.v1.AUTO_REUSE):
     x = ops.fully_connected(z, 16 * num_channel * init_h * init_w,
                             "fc_expand_z")
-    x = tf.reshape(x, [batch_size, init_h, init_w, 16 * num_channel])
+    x = tf.reshape(x, [batch_size, init_h, init_w, 16 * num_channel]) # # изменяет форму тензора не меняя его значения или их порядок
     x = spade.spade_resblock(
         x, img, 16 * num_channel,
         use_spectral_norm=config.USE_SPECTRAL_NORMALIZATION,
@@ -142,7 +143,5 @@ def refinement_network(rgbd, mask, z, scope="spade_generator"):
     x = ops.leaky_relu(x, 0.2)
     # Pre-trained checkpoint uses default conv scoping.
     x = ops.sn_conv(x, out_channels, kernel_size=3)
-    x = tf.tanh(x)
+    x = tf.tanh(x) # вычисляет гиперболический тангенс каждого элемента в тензоре
     return 0.5 * (x + 1)
-
-

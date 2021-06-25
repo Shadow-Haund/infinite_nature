@@ -17,8 +17,10 @@ def create_vertices_intrinsics(disparity, intrinsics):
   # Фокусное расстояние
   fx = intrinsics[:, 0]
   fy = intrinsics[:, 1]
-  fx = fx[Ellipsis, tf.newaxis, tf.newaxis]
-  fy = fy[Ellipsis, tf.newaxis, tf.newaxis]
+  fx = fx[Ellipsis, tf.newaxis, tf.newaxis] # я не знаю что это, в описании написано None но судя по таблице, где она
+  fy = fy[Ellipsis, tf.newaxis, tf.newaxis] # указана, это видимо тип данных
+  # еще момент, видимо это предполагается как аналог numpy.newaxis а она увеличивает массив на 1 измерение, предположу,
+  # что и здесь выполняется та же функция
 
   # Центры
   cx = intrinsics[:, 2]
@@ -29,8 +31,8 @@ def create_vertices_intrinsics(disparity, intrinsics):
   batch_size, height, width = disparity.shape.as_list()
   vertex_count = height * width
 
-  i, j = tf.meshgrid(tf.range(width), tf.range(height))
-  i = tf.cast(i, tf.float32)
+  i, j = tf.meshgrid(tf.range(width), tf.range(height)) # из 1D массива из N координат вернет список из N тензоров с рангом N в сетке N-D
+  i = tf.cast(i, tf.float32) # приводит тензор к новому типу данных
   j = tf.cast(j, tf.float32)
   width = tf.cast(width, tf.float32)
   height = tf.cast(height, tf.float32)
@@ -40,13 +42,13 @@ def create_vertices_intrinsics(disparity, intrinsics):
   i = i[tf.newaxis]
   j = j[tf.newaxis]
 
-  depths = 1.0 / tf.clip_by_value(disparity, 0.01, 1.0)
+  depths = 1.0 / tf.clip_by_value(disparity, 0.01, 1.0) # # Обрезает значения тензора до указанного минимума и максимума
   mx = depths / fx
   my = depths / fy
   px = (i-cx) * mx
   py = (j-cy) * my
 
-  vertices = tf.stack([px, py, depths], axis=-1)
+  vertices = tf.stack([px, py, depths], axis=-1)  #Упаковывает список тензоров в один тензор с рангом + 1
   vertices = tf.reshape(vertices, (batch_size, vertex_count, 3))
   return vertices
 
